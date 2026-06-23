@@ -5,7 +5,28 @@
       "name": "Arshad",
       "email": "arshad@form.com",
       "createdAt": "2026-06-23T11:54:53.770Z",
-      "updatedAt": "2026-06-23T11:55:10.855Z"
+      "updatedAt": "2026-06-23T12:53:56.074Z",
+      "state": "Uttar Pradesh",
+      "age": 21,
+      "category": "OBC",
+      "income": 359998,
+      "education": "12th Pass",
+      "gender": "Male",
+      "disability": false
+    },
+    {
+      "_id": "17eee52f854c2fa03f8b9812",
+      "name": "M Arshad",
+      "email": "ab@gmail.com",
+      "state": "Uttar Pradesh",
+      "age": 21,
+      "category": "OBC",
+      "income": 359998,
+      "education": "12th Pass",
+      "gender": "Male",
+      "disability": false,
+      "createdAt": "2026-06-23T12:26:51.443Z",
+      "updatedAt": "2026-06-23T12:26:51.443Z"
     }
   ],
   "documents": [],

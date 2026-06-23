@@ -7,6 +7,7 @@ const ocrService = require('../services/ocrService');
 const aiService = require('../services/aiService');
 const { dbService } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const { firestore } = require('../config/firebase-admin');
 
 // Multer Upload configuration (10MB limit)
 const upload = multer({
@@ -117,6 +118,49 @@ router.get('/users/me/applications', authenticate, async (req, res) => {
 });
 
 /**
+ * GET /api/users/me/history
+ * Protected — return user's analysis and verification history from Firestore
+ */
+router.get('/users/me/history', authenticate, async (req, res) => {
+  try {
+    const history = { analyses: [], verifications: [] };
+
+    if (firestore) {
+      try {
+        const analysesSnap = await firestore
+          .collection('analyses')
+          .where('email', '==', req.user.email)
+          .get();
+        history.analyses = analysesSnap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''))
+          .slice(0, 20);
+      } catch (err) {
+        console.error('Firestore analyses fetch error:', err.message);
+      }
+
+      try {
+        const verificationsSnap = await firestore
+          .collection('verifications')
+          .where('email', '==', req.user.email)
+          .get();
+        history.verifications = verificationsSnap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a, b) => (b.verifiedAt || '').localeCompare(a.verifiedAt || ''))
+          .slice(0, 20);
+      } catch (err) {
+        console.error('Firestore verifications fetch error:', err.message);
+      }
+    }
+
+    return res.status(200).json({ success: true, history });
+  } catch (err) {
+    console.error('History endpoint error:', err);
+    return res.status(500).json({ error: 'Error fetching user history.' });
+  }
+});
+
+/**
  * 1. NOTICE ANALYSIS MODULE
  * POST /api/analysis/notice
  * Upload PDF/image of government notice and extract structured parameters using OCR + AI
@@ -145,6 +189,24 @@ router.post('/analysis/notice', authenticate, upload.single('file'), async (req,
 
     // 2. Query AI distills details
     const analysis = await aiService.analyzeNotice(ocrResult.text);
+
+    // 3. Save to Firestore for user history (non-blocking)
+    if (firestore && req.user?.email) {
+      firestore.collection('analyses').add({
+        userId: req.user.uid,
+        email: req.user.email,
+        schemeName: analysis.schemeName || '',
+        benefitAmount: analysis.benefitAmount || '',
+        eligibility: analysis.eligibility || [],
+        documents: analysis.documents || [],
+        deadline: analysis.deadline || '',
+        instructions: analysis.instructions || [],
+        contactInformation: analysis.contactInformation || '',
+        fileName: req.file.originalname || '',
+        fileSize: req.file.size || 0,
+        savedAt: new Date().toISOString(),
+      }).catch(err => console.error('Firestore save analysis error:', err.message));
+    }
 
     return res.status(200).json({
       success: true,
@@ -322,6 +384,24 @@ router.post('/verification/check', authenticate, upload.any(), async (req, res) 
       }
 
       results.push(verifyReport);
+    }
+
+    // Save to Firestore for user history (non-blocking)
+    if (firestore && req.user?.email) {
+      firestore.collection('verifications').add({
+        userId: req.user.uid,
+        email: req.user.email,
+        documents: results.map(r => ({
+          type: r.type || '',
+          fileName: r.fileName || '',
+          status: r.status || '',
+          fields: r.fields || {},
+          validity: r.validity || {},
+          issues: r.issues || [],
+          action: r.action || '',
+        })),
+        verifiedAt: new Date().toISOString(),
+      }).catch(err => console.error('Firestore save verification error:', err.message));
     }
 
     return res.status(200).json({
