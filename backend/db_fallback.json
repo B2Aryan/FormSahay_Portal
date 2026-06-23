@@ -1,5 +1,13 @@
 {
-  "users": [],
+  "users": [
+    {
+      "_id": "6af7cd4153302f74ccaa50d9",
+      "name": "Arshad",
+      "email": "arshad@form.com",
+      "createdAt": "2026-06-23T11:54:53.770Z",
+      "updatedAt": "2026-06-23T11:55:10.855Z"
+    }
+  ],
   "documents": [],
   "applications": [],
   "schemes": [

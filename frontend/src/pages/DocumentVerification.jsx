@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
 import { 
   UploadCloud, 
   FileText, 
@@ -38,8 +38,6 @@ const DocumentVerification = () => {
   
   // Verification report
   const [report, setReport] = useState(null);
-
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   useEffect(() => {
     const id = localStorage.getItem('userId');
@@ -141,11 +139,7 @@ const DocumentVerification = () => {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/verification/check`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const response = await api.post('/verification/check', formData);
 
       setReport(response.data.documents);
       toast.success("Document verification completed!");

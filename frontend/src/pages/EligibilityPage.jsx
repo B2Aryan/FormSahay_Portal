@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
 import { 
   User, 
   Mail, 
@@ -52,7 +52,6 @@ const EligibilityPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   // Load existing profile from localStorage if present
   useEffect(() => {
@@ -96,7 +95,7 @@ const EligibilityPage = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/eligibility/check`, formData);
+      const response = await api.post('/eligibility/check', formData);
       
       setResult(response.data);
       

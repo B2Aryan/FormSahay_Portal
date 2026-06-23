@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { 
   FileText, 
@@ -39,8 +39,6 @@ const Dashboard = () => {
 
   // Selected Analysis Modal
   const [selectedAnalysis, setSelectedAnalysis] = useState(null);
-
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   useEffect(() => {
     // 1. Load User Profile from localStorage
@@ -175,7 +173,7 @@ const Dashboard = () => {
   const fetchRecommendations = async (userProfile) => {
     setLoadingRecs(true);
     try {
-      const response = await axios.post(`${API_URL}/recommendations/schemes`, userProfile);
+      const response = await api.post('/recommendations/schemes', userProfile);
       setRecommendations(response.data.schemes);
     } catch (err) {
       console.error("Failed to fetch recommendations", err);
@@ -195,7 +193,7 @@ const Dashboard = () => {
 
     try {
       // 1. Post to backend DB
-      await axios.post(`${API_URL}/notifications/send`, notificationPayload);
+      await api.post('/notifications/send', notificationPayload);
       
       // 2. Simulate EmailJS Event Trigger
       toast.success(

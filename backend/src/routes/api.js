@@ -6,6 +6,7 @@ const multer = require('multer');
 const ocrService = require('../services/ocrService');
 const aiService = require('../services/aiService');
 const { dbService } = require('../config/db');
+const { authenticate } = require('../middleware/auth');
 
 // Multer Upload configuration (10MB limit)
 const upload = multer({
@@ -13,11 +14,114 @@ const upload = multer({
 });
 
 /**
+ * AUTH: Login / Register user via Firebase token
+ * POST /api/auth/login
+ * Public — verifies Firebase ID token, creates/updates local user
+ */
+router.post('/auth/login', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const { admin } = require('../config/firebase-admin');
+    const { getAuth } = require('firebase-admin/auth');
+    const token = authHeader.split('Bearer ')[1];
+    const app = admin.getApps()[0];
+    const auth = getAuth(app);
+    const decoded = await auth.verifyIdToken(token);
+
+    const { uid, email } = decoded;
+    const displayName = decoded.name || (email ? email.split('@')[0] : 'User');
+    const { profileData } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email not available from authentication provider' });
+    }
+
+    // Find or create user in local DB
+    const users = await dbService.getUsers();
+    let user = users.find(u => u.email === email);
+
+    if (user) {
+      const updates = { name: displayName, updatedAt: new Date().toISOString() };
+      if (profileData) {
+        if (profileData.state) updates.state = profileData.state;
+        if (profileData.age) updates.age = Number(profileData.age);
+        if (profileData.category) updates.category = profileData.category;
+        if (profileData.income) updates.income = Number(profileData.income);
+        if (profileData.education) updates.education = profileData.education;
+        if (profileData.gender) updates.gender = profileData.gender;
+        if (profileData.disability !== undefined) updates.disability = profileData.disability;
+      }
+      user = await dbService.updateUser(user._id, updates);
+    } else {
+      user = await dbService.createUser({
+        name: displayName,
+        email,
+        ...(profileData || {}),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        state: user.state || '',
+        age: user.age || '',
+        category: user.category || '',
+        income: user.income || '',
+        education: user.education || '',
+        gender: user.gender || '',
+        disability: user.disability || false,
+      },
+    });
+  } catch (err) {
+    console.error('Auth login error:', err);
+    return res.status(500).json({ error: 'Authentication failed', message: err.message });
+  }
+});
+
+/**
+ * GET /api/users/me
+ * Protected — return current user profile from local DB
+ */
+router.get('/users/me', authenticate, async (req, res) => {
+  try {
+    const users = await dbService.getUsers();
+    const user = users.find(u => u.email === req.user.email);
+    if (!user) return res.status(404).json({ error: 'User profile not found.' });
+    return res.status(200).json(user);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error fetching user profile.' });
+  }
+});
+
+/**
+ * GET /api/users/me/applications
+ * Protected — return applications for current user
+ */
+router.get('/users/me/applications', authenticate, async (req, res) => {
+  try {
+    const users = await dbService.getUsers();
+    const user = users.find(u => u.email === req.user.email);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    const apps = await dbService.getApplications(user._id);
+    return res.status(200).json(apps);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error fetching user applications.' });
+  }
+});
+
+/**
  * 1. NOTICE ANALYSIS MODULE
  * POST /api/analysis/notice
  * Upload PDF/image of government notice and extract structured parameters using OCR + AI
  */
-router.post('/analysis/notice', upload.single('file'), async (req, res) => {
+router.post('/analysis/notice', authenticate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Please upload a file (PDF or image).' });
@@ -59,7 +163,7 @@ router.post('/analysis/notice', upload.single('file'), async (req, res) => {
  * POST /api/analysis/explanation
  * Explain official complex government jargon in simple plain language
  */
-router.post('/analysis/explanation', async (req, res) => {
+router.post('/analysis/explanation', authenticate, async (req, res) => {
   const { text } = req.body;
   if (!text || text.trim().length === 0) {
     return res.status(400).json({ error: 'Please provide official text to explain.' });
@@ -82,7 +186,7 @@ router.post('/analysis/explanation', async (req, res) => {
  * POST /api/eligibility/check
  * Run user profile inputs through scheme parameters and return decision + recommendation list
  */
-router.post('/eligibility/check', async (req, res) => {
+router.post('/eligibility/check', authenticate, async (req, res) => {
   const { state, age, category, income, education, gender, disability, name, email } = req.body;
 
   // Real-time validation check
@@ -159,7 +263,7 @@ router.post('/eligibility/check', async (req, res) => {
  * POST /api/verification/check
  * Upload multiple files and cross reference fields with AI
  */
-router.post('/verification/check', upload.any(), async (req, res) => {
+router.post('/verification/check', authenticate, upload.any(), async (req, res) => {
   try {
     const files = req.files;
     const { documentTypes, userId } = req.body;
@@ -235,7 +339,7 @@ router.post('/verification/check', upload.any(), async (req, res) => {
  * POST /api/recommendations/schemes
  * Returns recommended schemes based on user profile
  */
-router.post('/recommendations/schemes', async (req, res) => {
+router.post('/recommendations/schemes', authenticate, async (req, res) => {
   const { state, age, category, income, education } = req.body;
 
   try {
@@ -276,7 +380,7 @@ router.post('/recommendations/schemes', async (req, res) => {
  * POST /api/notifications/send
  * Logs notifications triggered by dashboard or EmailJS
  */
-router.post('/notifications/send', async (req, res) => {
+router.post('/notifications/send', authenticate, async (req, res) => {
   const { userId, type, title, message, deadline } = req.body;
   if (!userId || !title || !message) {
     return res.status(400).json({ error: 'userId, title, and message are required.' });
@@ -327,7 +431,7 @@ router.post('/notifications/send', async (req, res) => {
  * UTILITY USER PROFILE LOADING
  * GET /api/users/:id
  */
-router.get('/users/:id', async (req, res) => {
+router.get('/users/:id', authenticate, async (req, res) => {
   try {
     const user = await dbService.getUser(req.params.id);
     if (!user) return res.status(404).json({ error: 'User profile not found.' });
@@ -341,7 +445,7 @@ router.get('/users/:id', async (req, res) => {
  * UTILITY APPLICATIONS FETCH
  * GET /api/users/:id/applications
  */
-router.get('/users/:id/applications', async (req, res) => {
+router.get('/users/:id/applications', authenticate, async (req, res) => {
   try {
     const apps = await dbService.getApplications(req.params.id);
     return res.status(200).json(apps);
