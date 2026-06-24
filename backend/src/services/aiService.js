@@ -41,29 +41,37 @@ const cleanAndParseJson = (text) => {
   }
 };
 
-const queryAI = async (prompt, systemPrompt = "", model = "deepseek-r1-distill-llama-70b") => {
+const queryAI = async (prompt, systemPrompt = "", model = "llama-3.1-8b-instant", retries = 2) => {
   if (!hasApiKey) {
     throw new Error("No API Key configured");
   }
 
-  try {
-    const messages = [];
-    if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt });
+  const messages = [];
+  if (systemPrompt) {
+    messages.push({ role: 'system', content: systemPrompt });
+  }
+  messages.push({ role: 'user', content: prompt });
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await groq.chat.completions.create({
+        model: model,
+        messages: messages,
+        temperature: 0.1,
+      });
+      return response.choices[0].message.content;
+    } catch (err) {
+      const isRateLimit = err.status === 429;
+      const isLastAttempt = attempt === retries;
+      if (isRateLimit && !isLastAttempt) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      console.error(`Error querying Groq model ${model}:`, err.message);
+      if (isLastAttempt) throw err;
     }
-    messages.push({ role: 'user', content: prompt });
-
-    const response = await groq.chat.completions.create({
-      model: model,
-      messages: messages,
-      temperature: 0.1,
-      response_format: { type: "json_object" } // Groq supports JSON mode for structured outputs
-    });
-
-    return response.choices[0].message.content;
-  } catch (err) {
-    console.error(`Error querying Groq model ${model}:`, err.message);
-    throw err;
   }
 };
 
@@ -329,7 +337,6 @@ module.exports = {
   analyzeNotice: async (extractedText) => {
     if (!hasApiKey) {
       console.log("🤖 Simulated notice analysis initiated...");
-      // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       return simulateNoticeAnalysis(extractedText);
     }
@@ -351,8 +358,14 @@ module.exports = {
       """
     `;
     
-    const responseText = await queryAI(prompt, "You are a helpful assistant that parses official Indian government welfare and scholarship notices into clean structured JSON formats.");
-    return cleanAndParseJson(responseText) || simulateNoticeAnalysis(extractedText);
+    try {
+      const responseText = await queryAI(prompt, "You are a helpful assistant that parses official Indian government welfare and scholarship notices into clean structured JSON formats.");
+      const parsed = cleanAndParseJson(responseText);
+      if (parsed) return parsed;
+    } catch (err) {
+      console.error('Groq API call failed, falling back to simulation:', err.message);
+    }
+    return simulateNoticeAnalysis(extractedText);
   },
 
   // Eligibility Checker
