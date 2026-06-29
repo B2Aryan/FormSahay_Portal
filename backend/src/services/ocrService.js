@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const Tesseract = require('tesseract.js');
 const path = require('path');
 
-const PYTHON = 'C:\\Program Files\\Python312\\python.exe';
+const PYTHON = process.env.OCR_PYTHON_PATH || 'python3';
 const PDF_TO_IMAGE = path.join(__dirname, 'pdfToImage.py');
 const PADDLE_OCR = path.join(__dirname, 'paddleOcr.py');
 
@@ -62,7 +62,9 @@ async function runTesseract(imageBuffer, originalName) {
   let worker = null;
   try {
     console.log(`📷 Running Tesseract OCR on ${originalName}`);
-    worker = await Tesseract.createWorker('eng+hin');
+    worker = await Tesseract.createWorker('eng+hin', 1, {
+      cachePath: path.join(__dirname, '../../')
+    });
     const { data: { text, confidence } } = await worker.recognize(imageBuffer).catch(() => {
       return { data: { text: '', confidence: 0 } };
     });
