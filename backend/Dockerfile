@@ -1,12 +1,9 @@
 FROM node:20-bookworm-slim
 
-# Install Python 3 + pip for PyMuPDF OCR
+# Install Python 3 + pip for PyMuPDF PDF rendering
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    tesseract-ocr-hin \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/render/project/src/backend

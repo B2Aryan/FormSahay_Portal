@@ -15,28 +15,51 @@ if (hasApiKey) {
 // Helper: safe JSON parsing for AI outputs
 const cleanAndParseJson = (text) => {
   try {
-    // Strip markdown JSON codeblock markers if present
+    if (!text || typeof text !== 'string') return null;
+
     let cleaned = text.trim();
-    if (cleaned.startsWith('```json')) {
-      cleaned = cleaned.substring(7);
-    } else if (cleaned.startsWith('```')) {
-      cleaned = cleaned.substring(3);
-    }
-    if (cleaned.endsWith('```')) {
-      cleaned = cleaned.substring(0, cleaned.length - 3);
-    }
-    cleaned = cleaned.trim();
-    
-    // Find the first '{' or '[' and the last '}' or ']'
-    const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    if (!cleaned) return null;
+
+    // Strip markdown code block markers
+    const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      cleaned = codeBlockMatch[1].trim();
     }
 
-    return JSON.parse(cleaned);
+    // Try parsing as-is first
+    try {
+      return JSON.parse(cleaned);
+    } catch {}
+
+    // Find first '{' and match braces properly (handling strings with braces)
+    const start = cleaned.indexOf('{');
+    if (start === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+
+      if (escaped) { escaped = false; continue; }
+      if (ch === '\\' && inString) { escaped = true; continue; }
+
+      if (ch === '"' && !escaped) { inString = !inString; continue; }
+      if (inString) continue;
+
+      if (ch === '{') depth++;
+      if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          return JSON.parse(cleaned.substring(start, i + 1));
+        }
+      }
+    }
+
+    return null;
   } catch (err) {
-    console.error("Failed to parse JSON from AI response, returning raw content wrapped", err);
+    console.error("Failed to parse JSON from AI response:", err.message);
     return null;
   }
 };
