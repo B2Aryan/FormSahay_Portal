@@ -62,9 +62,7 @@ async function runTesseract(imageBuffer, originalName) {
   let worker = null;
   try {
     console.log(`📷 Running Tesseract OCR on ${originalName}`);
-    worker = await Tesseract.createWorker('eng+hin', 1, {
-      cachePath: path.join(__dirname, '../../')
-    });
+    worker = await Tesseract.createWorker(['eng', 'hin'], 1);
     const { data: { text, confidence } } = await worker.recognize(imageBuffer).catch(() => {
       return { data: { text: '', confidence: 0 } };
     });
