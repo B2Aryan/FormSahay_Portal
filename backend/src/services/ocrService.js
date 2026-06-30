@@ -1,10 +1,9 @@
 const { spawn } = require('child_process');
-const Tesseract = require('tesseract.js');
 const path = require('path');
 
 const PYTHON = process.env.OCR_PYTHON_PATH || 'python3';
 const PDF_TO_IMAGE = path.join(__dirname, 'pdfToImage.py');
-const PADDLE_OCR = path.join(__dirname, 'paddleOcr.py');
+const PYTHON_OCR = path.join(__dirname, 'pythonOcr.py');
 
 function runPython(scriptPath, args, inputData) {
   return new Promise((resolve, reject) => {
@@ -33,7 +32,7 @@ const extractText = async (fileBuffer, mimeType, originalName) => {
   const isPdf = mimeType === 'application/pdf' || originalName.toLowerCase().endsWith('.pdf');
   const inputB64 = fileBuffer.toString('base64');
 
-  // --- PDF path: PyMuPDF text extraction, fallback to Tesseract ---
+  // --- PDF path: PyMuPDF text extraction, fallback to pytesseract OCR ---
   if (isPdf) {
     console.log(`📄 Parsing PDF via PyMuPDF: ${originalName}`);
     try {
@@ -43,43 +42,34 @@ const extractText = async (fileBuffer, mimeType, originalName) => {
         console.log(`✅ Extracted ${text.length} characters of selectable text from PDF.`);
         return { text, method: 'pymupdf', success: true };
       }
-      console.log(`⚠️ Selectable text too short (${text.length} chars). Running OCR...`);
+      console.log(`⚠️ Selectable text too short (${text.length} chars). Running OCR via Python...`);
       if (pdfResult.image_base64) {
-        const imgBuffer = Buffer.from(pdfResult.image_base64, 'base64');
-        return await runTesseract(imgBuffer, originalName);
+        return await runPythonOcr(pdfResult.image_base64, originalName);
       }
     } catch (err) {
       console.error('PyMuPDF error:', err.message);
-      return await runTesseract(fileBuffer, originalName);
+      return await runPythonOcr(inputB64, originalName);
     }
   }
 
-  // --- Image path (or any non-PDF) ---
-  return await runTesseract(fileBuffer, originalName);
+  // --- Image path ---
+  return await runPythonOcr(inputB64, originalName);
 };
 
-async function runTesseract(imageBuffer, originalName) {
-  let worker = null;
+async function runPythonOcr(imageB64, originalName) {
+  console.log(`🔍 Running Python pytesseract OCR on ${originalName}`);
   try {
-    console.log(`📷 Running Tesseract OCR on ${originalName}`);
-    worker = await Tesseract.createWorker(['eng', 'hin'], 1);
-    const { data: { text, confidence } } = await worker.recognize(imageBuffer).catch(() => {
-      return { data: { text: '', confidence: 0 } };
-    });
-    console.log(`✅ Tesseract complete. Confidence: ${confidence}%. ${text.trim().length} chars.`);
+    const result = await runPython(PYTHON_OCR, [], imageB64);
+    console.log(`✅ Python OCR complete. Confidence: ${result.confidence}%. ${(result.text || '').length} chars.`);
     return {
-      text: text.trim(),
-      method: 'tesseract',
-      confidence,
-      success: text.trim().length > 0,
+      text: (result.text || '').trim(),
+      method: 'pytesseract',
+      confidence: result.confidence || 0,
+      success: result.success === true,
     };
   } catch (err) {
-    console.error('Tesseract error:', err.message);
-    return { text: '', method: 'tesseract', success: false, error: err.message };
-  } finally {
-    if (worker) {
-      try { await worker.terminate(); } catch (e) { /* ignore */ }
-    }
+    console.error('Python OCR error:', err.message);
+    return { text: '', method: 'pytesseract', success: false, error: err.message };
   }
 }
 
