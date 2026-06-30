@@ -15,6 +15,9 @@ function runPython(scriptPath, args, inputData) {
     child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
     child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
     child.on('close', (code) => {
+      if (stderr.trim()) {
+        console.log(`[Python stderr] ${stderr.trim()}`);
+      }
       if (code !== 0) {
         reject(new Error(`Python exited code ${code}: ${stderr.slice(0, 300).trim()}`));
       } else {
