@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import { 
   FileText, 
   UserCheck, 
@@ -87,7 +88,25 @@ const Home = () => {
     }
   ];
 
+  const homeJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "FormSahay Portal",
+    "url": "https://form-sahay-portal.vercel.app",
+    "description": "AI-powered assistant for Indian government welfare schemes. Analyze notices, check eligibility, verify documents.",
+    "applicationCategory": "GovernmentApplication",
+    "operatingSystem": "Web",
+    "offers": { "@type": "Offer", "price": "0" },
+    "browserRequirements": "Requires JavaScript"
+  };
+
   return (
+    <>
+      <SEO
+        title="AI Government Scheme Assistant"
+      description="Upload government notices, check welfare scheme eligibility, and verify documents using AI. Your smart assistant for PM Kisan, NSP Scholarships, and more."
+      jsonLd={homeJsonLd}
+    />
     <div className="space-y-16 pb-12">
       {/* 1. Hero Section (Grounded Civic Intro with AI Demo) */}
       <section className="relative py-12 px-6 sm:py-16 sm:px-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-slate-800 dark:text-slate-100 overflow-hidden">
@@ -291,6 +310,7 @@ const Home = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

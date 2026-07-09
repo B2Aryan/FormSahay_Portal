@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import SEO from '../components/SEO';
 import { 
   UploadCloud, 
   FileText, 
@@ -183,6 +184,8 @@ const DocumentVerification = () => {
   };
 
   return (
+    <>
+      <SEO title="Document Verification" description="Upload and verify government documents like Aadhaar, income certificates, and domicile certificates using AI-powered checks." />
     <div className="space-y-8 pb-12">
       <div className="max-w-2xl mx-auto text-center space-y-3">
         <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
@@ -503,6 +506,7 @@ const DocumentVerification = () => {
 
       </div>
     </div>
+    </>
   );
 };
 

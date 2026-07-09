@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import SEO from '../components/SEO';
 import { 
   UploadCloud, 
   FileText, 
@@ -176,6 +177,8 @@ const NoticeAnalysis = () => {
   };
 
   return (
+    <>
+      <SEO title="Notice Analysis" description="Upload government scheme notices and let AI extract eligibility, required documents, deadlines, and benefits." />
     <div className="space-y-8 pb-12">
       <div className="max-w-2xl mx-auto text-center space-y-3">
         <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
@@ -555,6 +558,7 @@ const NoticeAnalysis = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

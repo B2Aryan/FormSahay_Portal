@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import SEO from '../components/SEO';
 import { 
   User, 
   Mail, 
@@ -175,6 +176,8 @@ const EligibilityPage = () => {
   };
 
   return (
+    <>
+      <SEO title="Eligibility Check" description="Check your eligibility for Indian government welfare schemes like PM Kisan, NSP Scholarships, and more using AI." />
     <div className="space-y-8 pb-12">
       <div className="max-w-2xl mx-auto text-center space-y-3">
         <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
@@ -514,6 +517,7 @@ const EligibilityPage = () => {
 
       </div>
     </div>
+    </>
   );
 };
 

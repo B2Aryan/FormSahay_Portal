@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /signup
+Disallow: /dashboard
+Disallow: /analyze
+Disallow: /eligibility
+Disallow: /verify
+
+Sitemap: https://form-sahay-portal.vercel.app/sitemap.xml

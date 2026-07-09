@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Mail, Lock, User, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import SEO from '../components/SEO';
 
 const Signup = () => {
   const { signUp, signInWithGoogle } = useAuth();
@@ -61,6 +62,8 @@ const Signup = () => {
   };
 
   return (
+    <>
+      <SEO title="Create Account" description="Sign up for FormSahay to access AI-powered government scheme analysis and eligibility checks." noindex />
     <div className="flex items-center justify-center min-h-[70vh] px-4">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-card shadow-sm p-8">
         <div className="text-center mb-8">
@@ -190,6 +193,7 @@ const Signup = () => {
         </p>
       </div>
     </div>
+    </>
   );
 };
 

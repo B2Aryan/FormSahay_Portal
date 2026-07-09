@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import SEO from '../components/SEO';
 import { 
   FileText, 
   ShieldCheck, 
@@ -238,6 +239,8 @@ const Dashboard = () => {
   };
 
   return (
+    <>
+      <SEO title="Dashboard" description="Your personal dashboard for government scheme analysis history and eligibility checks." noindex />
     <div className="space-y-8 pb-12">
       {/* Welcome Header Banner */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 text-white p-8 rounded-3xl shadow-medium relative overflow-hidden">
@@ -623,6 +626,7 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 };
 
