@@ -299,7 +299,7 @@ VITE_API_URL=http://localhost:5000/api
 ---
 
 ## 🚀 Production Deployment
-
+ 
 ### Frontend (Vercel)
 The frontend is optimized for deployment on Vercel:
 1. Set the **Root Directory** to `frontend`.
